@@ -1,4 +1,4 @@
-app = "eclipse-hunter-api"
+app = "eclipse-hunter-api-haydo"
 primary_region = "fra"
 
 [build]
