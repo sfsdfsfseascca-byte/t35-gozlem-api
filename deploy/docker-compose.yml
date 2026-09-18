@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      EH_REDIS_URL: redis://redis:6379/0
+      EH_CACHE_BACKEND: redis
+      EH_CORS_ORIGINS: "*"
+      EH_USER_AGENT: "EclipseHunter/1.0 (+http://localhost; contact: dev@localhost)"
+    depends_on:
+      - redis
+    volumes:
+      - ../backend/data:/app/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

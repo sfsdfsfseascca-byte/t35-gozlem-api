@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Debug allows cleartext HTTP for 10.0.2.2 emulator -->
+    <application android:usesCleartextTraffic="true" />
+</manifest>

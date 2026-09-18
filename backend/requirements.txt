@@ -1,0 +1,15 @@
+# Eclipse Hunter Backend - pinned for reproducibility
+fastapi==0.141.1
+uvicorn[standard]==0.38.0
+pydantic==2.11.7
+httpx==0.28.1
+astropy==8.0.1
+astroquery==0.4.11
+numpy==2.3.5
+scipy==1.17.1
+redis==5.2.1
+python-dotenv==1.0.1
+# Testing
+pytest==9.0.2
+pytest-asyncio==1.1.0
+httpx==0.28.1

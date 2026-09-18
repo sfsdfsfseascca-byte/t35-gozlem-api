@@ -1,0 +1,33 @@
+app = "eclipse-hunter-api"
+primary_region = "fra"
+
+[build]
+  dockerfile = "../backend/Dockerfile"
+  # Use backend as context - fly will need to be run from repo root with:
+  # fly deploy --config deploy/fly.toml --dockerfile backend/Dockerfile
+
+[env]
+  EH_CACHE_BACKEND = "auto"
+  EH_LOG_LEVEL = "INFO"
+  EH_CORS_ORIGINS = "*"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 100
+    soft_limit = 50
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 1024
+
+# Secrets to set:
+# fly secrets set EH_REDIS_URL=redis://... EH_API_KEY=... EH_USER_AGENT="EclipseHunter/1.0 (+https://...; contact:...)"
