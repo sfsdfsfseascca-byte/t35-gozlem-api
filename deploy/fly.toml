@@ -1,4 +1,4 @@
-app = "eclipse-hunter-api-haydo"
+app = "t35-gozlem-api"
 primary_region = "fra"
 
 [build]
