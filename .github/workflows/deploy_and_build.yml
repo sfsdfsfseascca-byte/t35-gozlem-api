@@ -1,0 +1,68 @@
+name: Deploy Backend + Build APK (All-in-One)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: 'Where to deploy backend?'
+        type: choice
+        options: [ fly, render, none ]
+        default: 'fly'
+      api_base_url:
+        description: 'Override API URL (leave empty to auto-detect Fly URL)'
+        required: false
+        default: ''
+
+jobs:
+  deploy-fly:
+    if: ${{ inputs.deploy_target == 'fly' || inputs.deploy_target == '' }}
+    runs-on: ubuntu-latest
+    outputs:
+      api_url: ${{ steps.set-url.outputs.api_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        run: flyctl deploy --config deploy/fly.toml --dockerfile backend/Dockerfile --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Set API URL output
+        id: set-url
+        run: |
+          APP_NAME=$(grep '^app =' deploy/fly.toml | cut -d'"' -f2)
+          echo "api_url=https://$APP_NAME.fly.dev" >> $GITHUB_OUTPUT
+
+  build-apk:
+    needs: [deploy-fly]
+    if: always() && (needs.deploy-fly.result == 'success' || inputs.deploy_target == 'none' || inputs.deploy_target == 'render')
+    runs-on: ubuntu-latest
+    env:
+      # Priority: manual input > fly output > repo variable > secret > default
+      API_BASE_URL: ${{ inputs.api_base_url || needs.deploy-fly.outputs.api_url || vars.API_BASE_URL || secrets.API_BASE_URL || 'https://eclipse-hunter-api.fly.dev' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate frontend
+        run: |
+          if [ -d "frontend/pubspec.yaml" ]; then echo "FRONTEND_DIR=frontend" >> $GITHUB_ENV
+          else echo "FRONTEND_DIR=eclipse-hunter/frontend" >> $GITHUB_ENV; fi
+      - uses: actions/setup-java@v4
+        with: { distribution: 'zulu', java-version: '17' }
+      - uses: subosito/flutter-action@v2
+        with: { flutter-version: '3.22.x', channel: 'stable', cache: true }
+      - run: flutter pub get
+        working-directory: ${{ env.FRONTEND_DIR }}
+      - run: flutter build apk --release --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
+        working-directory: ${{ env.FRONTEND_DIR }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eclipse-hunter-apk
+          path: ${{ env.FRONTEND_DIR }}/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "### Full Pipeline Done! ✅" >> $GITHUB_STEP_SUMMARY
+          echo "Backend: ${{ env.API_BASE_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "APK: Download from Artifacts" >> $GITHUB_STEP_SUMMARY
