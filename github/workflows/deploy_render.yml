@@ -1,0 +1,40 @@
+name: Deploy Backend to Render
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'backend/**'
+      - 'deploy/render.yaml'
+      - '.github/workflows/deploy_render.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy API to Render
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trigger Render Deploy Hook (if set)
+        # If you use render.yaml Blueprint, Render auto-deploys on push anyway.
+        # This hook is for manual deploys. Create it in Render Dashboard > Service > Settings > Deploy Hook
+        run: |
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            echo "Triggering Render deploy hook..."
+            curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" && echo "Hook triggered!"
+          else
+            echo "RENDER_DEPLOY_HOOK_URL secret not set - skipping hook trigger."
+            echo "If you connected your repo via Render Blueprint (render.yaml), Render will auto-deploy on push anyway."
+          fi
+
+      - name: Summary
+        run: |
+          echo "### Render Deploy Triggered! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. If you use **render.yaml Blueprint**: Go to https://dashboard.render.com -> New -> Blueprint -> Connect this repo. Render will create API + Redis for free." >> $GITHUB_STEP_SUMMARY
+          echo "2. If you use **Deploy Hook**: Set secret RENDER_DEPLOY_HOOK_URL in GitHub Settings." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "After deploy, your URL will be like: \`https://eclipse-hunter-api.onrender.com\`" >> $GITHUB_STEP_SUMMARY
+          echo "Check \`/health\` and set it as API_BASE_URL for APK build." >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,44 @@
+name: Deploy Backend to Fly.io
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'backend/**'
+      - 'deploy/fly.toml'
+      - '.github/workflows/deploy_fly.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy API to Fly.io
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: |
+          echo "Deploying backend from $(pwd)"
+          # fly.toml expects dockerfile at ../backend/Dockerfile relative to deploy/
+          # So we deploy from repo root
+          flyctl deploy --config deploy/fly.toml --dockerfile backend/Dockerfile --remote-only
+
+      - name: Show App Info
+        run: |
+          flyctl status --config deploy/fly.toml || true
+          flyctl info --config deploy/fly.toml || true
+          echo ""
+          echo "### Backend Deployed to Fly.io! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          APP_NAME=$(grep '^app =' deploy/fly.toml | cut -d'"' -f2)
+          echo "**App:** \`$APP_NAME\`" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** \`https://$APP_NAME.fly.dev\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Health:** \`https://$APP_NAME.fly.dev/health\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Set this URL as \`API_BASE_URL\` variable for the APK workflow!" >> $GITHUB_STEP_SUMMARY
